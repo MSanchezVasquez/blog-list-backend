@@ -37,9 +37,29 @@ const mostBlogs = (blogs) => {
   };
 };
 
+const mostLikes = (blogs) => {
+  if (blogs.length === 0) return null;
+
+  // Agrupar blogs por autor
+  const groupedBlogs = _.groupBy(blogs, "author");
+
+  // Transformar el objeto agrupado en un array de objetos { author, likes }
+  const authorsWithLikes = _.map(groupedBlogs, (authorBlogs, authorName) => {
+    return {
+      author: authorName,
+      // Sumamos los likes de todos los blogs de este autor
+      likes: _.sumBy(authorBlogs, "likes"),
+    };
+  });
+
+  // Devolver el que tenga más likes
+  return _.maxBy(authorsWithLikes, "likes");
+};
+
 module.exports = {
   dummy,
   totalLikes,
   favoriteBlog,
   mostBlogs,
+  mostLikes,
 };
