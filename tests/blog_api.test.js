@@ -80,6 +80,22 @@ describe("there are initially some blogs saved", () => {
     // El título debe estar en la lista
     assert.ok(contents.includes("Async/await simplifies making async calls"));
   });
+
+  test("likes defaults to 0 if missing", async () => {
+    const newBlog = {
+      title: "Blog with no likes",
+      author: "Unknown",
+      url: "http://nolikes.com",
+    };
+
+    const response = await api
+      .post("/api/blogs")
+      .send(newBlog)
+      .expect(201)
+      .expect("Content-Type", /application\/json/);
+
+    assert.strictEqual(response.body.likes, 0);
+  });
 });
 
 after(async () => {
