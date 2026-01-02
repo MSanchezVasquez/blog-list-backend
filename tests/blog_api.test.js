@@ -55,6 +55,31 @@ describe("there are initially some blogs saved", () => {
 
     assert.strictEqual(blogToCheck._id, undefined);
   });
+
+  test("a valid blog can be added", async () => {
+    const newBlog = {
+      title: "Async/await simplifies making async calls",
+      author: "Jest User",
+      url: "https://jestjs.io/docs/en/asynchronous",
+      likes: 10,
+    };
+
+    await api
+      .post("/api/blogs")
+      .send(newBlog)
+      .expect(201)
+      .expect("Content-Type", /application\/json/);
+
+    const response = await api.get("/api/blogs");
+
+    const contents = response.body.map((r) => r.title);
+
+    // La longitud debe ser la inicial + 1
+    assert.strictEqual(response.body.length, initialBlogs.length + 1);
+
+    // El título debe estar en la lista
+    assert.ok(contents.includes("Async/await simplifies making async calls"));
+  });
 });
 
 after(async () => {
