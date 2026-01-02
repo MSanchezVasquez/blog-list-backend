@@ -96,6 +96,42 @@ describe("there are initially some blogs saved", () => {
 
     assert.strictEqual(response.body.likes, 0);
   });
+
+  test("likes defaults to 0 if missing", async () => {
+    const newBlog = {
+      title: "Blog with no likes",
+      author: "Unknown",
+      url: "http://nolikes.com",
+    };
+
+    const response = await api
+      .post("/api/blogs")
+      .send(newBlog)
+      .expect(201)
+      .expect("Content-Type", /application\/json/);
+
+    assert.strictEqual(response.body.likes, 0);
+  });
+
+  test("backend responds with 400 if title is missing", async () => {
+    const newBlog = {
+      author: "Test Author",
+      url: "http://testurl.com",
+      likes: 5,
+    };
+
+    await api.post("/api/blogs").send(newBlog).expect(400); // Esperamos Bad Request
+  });
+
+  test("backend responds with 400 if url is missing", async () => {
+    const newBlog = {
+      title: "Test Title",
+      author: "Test Author",
+      likes: 5,
+    };
+
+    await api.post("/api/blogs").send(newBlog).expect(400); // Esperamos Bad Request
+  });
 });
 
 after(async () => {
