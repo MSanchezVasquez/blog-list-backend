@@ -2,7 +2,7 @@ const { test, after, beforeEach, describe } = require("node:test");
 const assert = require("node:assert");
 const mongoose = require("mongoose");
 const supertest = require("supertest");
-const app = require("../app"); // Tu aplicación express
+const app = require("../app");
 const api = supertest(app);
 const Blog = require("../models/blog");
 
@@ -44,9 +44,19 @@ describe("there are initially some blogs saved", () => {
 
     assert.strictEqual(response.body.length, initialBlogs.length);
   });
+
+  test("the unique identifier property of the blog posts is named id", async () => {
+    const response = await api.get("/api/blogs");
+
+    // Tomamos el primer blog de la respuesta
+    const blogToCheck = response.body[0];
+
+    assert.ok(blogToCheck.id);
+
+    assert.strictEqual(blogToCheck._id, undefined);
+  });
 });
 
-// Al finalizar todos los tests, cerramos la conexión a Mongo
 after(async () => {
   await mongoose.connection.close();
 });
