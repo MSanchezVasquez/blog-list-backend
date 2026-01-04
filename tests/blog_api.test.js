@@ -150,6 +150,23 @@ describe("there are initially some blogs saved", () => {
     const contents = blogsAtEnd.map((r) => r.title);
     assert.ok(!contents.includes(blogToDelete.title));
   });
+
+  test("succeeds with status 200 if update is valid", async () => {
+    const blogsAtStart = await Blog.find({});
+    const blogToUpdate = blogsAtStart[0];
+
+    // Le sumamos 10 likes a los que ya tenga
+    const updatedData = {
+      likes: blogToUpdate.likes + 10,
+    };
+
+    const result = await api
+      .put(`/api/blogs/${blogToUpdate.id}`)
+      .send(updatedData)
+      .expect(200);
+
+    assert.strictEqual(result.body.likes, blogToUpdate.likes + 10);
+  });
 });
 
 after(async () => {
