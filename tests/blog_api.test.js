@@ -132,6 +132,24 @@ describe("there are initially some blogs saved", () => {
 
     await api.post("/api/blogs").send(newBlog).expect(400); // Esperamos Bad Request
   });
+
+  test("succeeds with status code 204 if id is valid", async () => {
+    // 1. Buscamos qué hay en la DB actualmente
+    const blogsAtStart = await Blog.find({});
+    const blogToDelete = blogsAtStart[0];
+
+    // 2. Ejecutamos el borrado
+    await api.delete(`/api/blogs/${blogToDelete.id}`).expect(204);
+
+    // 3. Verificamos el resultado final
+    const blogsAtEnd = await Blog.find({});
+
+    assert.strictEqual(blogsAtEnd.length, blogsAtStart.length - 1);
+
+    // Opcional: aseguramos que el título borrado ya no existe
+    const contents = blogsAtEnd.map((r) => r.title);
+    assert.ok(!contents.includes(blogToDelete.title));
+  });
 });
 
 after(async () => {
