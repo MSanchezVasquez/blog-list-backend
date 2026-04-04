@@ -5,31 +5,56 @@ const supertest = require("supertest");
 const app = require("../app");
 const api = supertest(app);
 const Blog = require("../models/blog");
+const User = require("../models/user");
+
+let token = null;
 
 const initialBlogs = [
   {
-    title: "HTML is easy",
-    author: "Dijkstra",
-    url: "http://html-easy.com",
-    likes: 10,
+    title: "React patterns",
+    author: "Michael Chan",
+    url: "https://reactpatterns.com/",
+    likes: 7,
   },
   {
-    title: "Browser can execute only JavaScript",
-    author: "Brendan Eich",
-    url: "http://js-only.com",
-    likes: 20,
+    title: "Go To Statement Considered Harmful",
+    author: "Edsger W. Dijkstra",
+    url: "http://www.u.arizona.edu/~rubinson/copyright_violations/Go_To_Considered_Harmful.html",
+    likes: 5,
   },
 ];
 
-describe("there are initially some blogs saved", () => {
-  // Antes de cada test, borramos todo y guardamos los iniciales
+describe("when there is initially some blogs saved", () => {
   beforeEach(async () => {
     await Blog.deleteMany({});
+    await User.deleteMany({});
 
-    // Guardamos los blogs iniciales de forma paralela
-    const blogObjects = initialBlogs.map((blog) => new Blog(blog));
-    const promiseArray = blogObjects.map((blog) => blog.save());
-    await Promise.all(promiseArray);
+    // Creamos un usuario de prueba
+    const newUser = {
+      username: "testuser",
+      name: "Test User",
+      password: "password123",
+    };
+    await api.post("/api/users").send(newUser);
+
+    // Iniciamos sesión para obtener el token
+    const loginResponse = await api
+      .post("/api/login")
+      .send({ username: "testuser", password: "password123" });
+
+    token = loginResponse.body.token;
+
+    // Buscamos al usuario recién creado para asignarle los blogs iniciales
+    const user = await User.findOne({ username: "testuser" });
+
+    // 🛠️ Guardamos los blogs iniciales en la base de datos vinculados a este usuario
+    for (let blog of initialBlogs) {
+      let blogObject = new Blog({
+        ...blog,
+        user: user._id,
+      });
+      await blogObject.save();
+    }
   });
 
   test("blogs are returned as json", async () => {
@@ -66,35 +91,28 @@ describe("there are initially some blogs saved", () => {
 
     await api
       .post("/api/blogs")
+      .set("Authorization", `Bearer ${token}`)
       .send(newBlog)
       .expect(201)
       .expect("Content-Type", /application\/json/);
 
-    const response = await api.get("/api/blogs");
+    const blogsAtEnd = await Blog.find({});
+    assert.strictEqual(blogsAtEnd.length, initialBlogs.length + 1);
 
-    const contents = response.body.map((r) => r.title);
-
-    // La longitud debe ser la inicial + 1
-    assert.strictEqual(response.body.length, initialBlogs.length + 1);
-
-    // El título debe estar en la lista
+    const contents = blogsAtEnd.map((b) => b.title);
     assert.ok(contents.includes("Async/await simplifies making async calls"));
   });
 
-  test("likes defaults to 0 if missing", async () => {
+  test("fails with status code 401 if token is not provided", async () => {
     const newBlog = {
-      title: "Blog with no likes",
-      author: "Unknown",
-      url: "http://nolikes.com",
+      title: "Blog no autorizado",
+      author: "Hacker",
+      url: "http://hack.com",
     };
 
-    const response = await api
-      .post("/api/blogs")
-      .send(newBlog)
-      .expect(201)
-      .expect("Content-Type", /application\/json/);
+    const result = await api.post("/api/blogs").send(newBlog).expect(401);
 
-    assert.strictEqual(response.body.likes, 0);
+    assert.ok(result.body.error.includes("token missing or invalid"));
   });
 
   test("likes defaults to 0 if missing", async () => {
@@ -106,6 +124,7 @@ describe("there are initially some blogs saved", () => {
 
     const response = await api
       .post("/api/blogs")
+      .set("Authorization", `Bearer ${token}`)
       .send(newBlog)
       .expect(201)
       .expect("Content-Type", /application\/json/);
@@ -120,7 +139,11 @@ describe("there are initially some blogs saved", () => {
       likes: 5,
     };
 
-    await api.post("/api/blogs").send(newBlog).expect(400); // Esperamos Bad Request
+    await api
+      .post("/api/blogs")
+      .set("Authorization", `Bearer ${token}`)
+      .send(newBlog)
+      .expect(400); // Esperamos Bad Request
   });
 
   test("backend responds with 400 if url is missing", async () => {
@@ -130,7 +153,11 @@ describe("there are initially some blogs saved", () => {
       likes: 5,
     };
 
-    await api.post("/api/blogs").send(newBlog).expect(400); // Esperamos Bad Request
+    await api
+      .post("/api/blogs")
+      .set("Authorization", `Bearer ${token}`)
+      .send(newBlog)
+      .expect(400); // Esperamos Bad Request
   });
 
   test("succeeds with status code 204 if id is valid", async () => {
@@ -139,7 +166,10 @@ describe("there are initially some blogs saved", () => {
     const blogToDelete = blogsAtStart[0];
 
     // 2. Ejecutamos el borrado
-    await api.delete(`/api/blogs/${blogToDelete.id}`).expect(204);
+    await api
+      .delete(`/api/blogs/${blogToDelete.id}`)
+      .set("Authorization", `Bearer ${token}`)
+      .expect(204);
 
     // 3. Verificamos el resultado final
     const blogsAtEnd = await Blog.find({});
