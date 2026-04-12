@@ -6,12 +6,21 @@ const User = require("../models/user");
 loginRouter.post("/", async (request, response) => {
   const { username, password } = request.body;
 
+  console.log("1. Intentando login con:", username, password);
+
   // Buscamos al usuario por su username
   const user = await User.findOne({ username });
+
+  console.log(
+    "2. Usuario encontrado en DB:",
+    user ? user.username : "Ninguno (null)",
+  );
 
   // Comparamos la contraseña recibida con el hash guardado
   const passwordCorrect =
     user === null ? false : await bcrypt.compare(password, user.passwordHash);
+
+  console.log("3. ¿Contraseña correcta?:", passwordCorrect);
 
   if (!(user && passwordCorrect)) {
     return response.status(401).json({
