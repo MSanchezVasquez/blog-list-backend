@@ -77,9 +77,10 @@ blogsRouter.put("/:id", async (request, response) => {
     likes: body.likes,
   };
 
+  // Usamos populate para devolver la información completa del usuario
   const updatedBlog = await Blog.findByIdAndUpdate(request.params.id, blog, {
     new: true,
-  });
+  }).populate("user", { username: 1, name: 1 });
 
   response.json(updatedBlog);
 });
